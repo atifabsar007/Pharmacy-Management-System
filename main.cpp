@@ -41,8 +41,8 @@ bool isDateExpired(const string& expiryDate){
     int day = 0;
     int month = 0;
     int year = 0;
-    char firstSlash = '\\0';
-    char secondSlash = '\\0';
+    char firstSlash = '\0';
+    char secondSlash = '\0';
 
     stringstream ss(expiryDate);
     if (!(ss >> day >> firstSlash >> month >> secondSlash >> year) ||
