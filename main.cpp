@@ -35,29 +35,51 @@ string getCurrentDate(){
 
 // local broken-down time : the current date and time, expressed in our local time zone, split into components (year, month, day)
 
-// parses a date in the string expiryDate and returns true if that date is strictly before today, otherwise false
-// Function to check expire date of a medicine
+// Returns true when a medicine expiry date is in the past or is invalid.
+// Invalid dates are treated as expired so malformed inventory data cannot be sold.
 bool isDateExpired(const string& expiryDate){
-    time_t now = time(0);   // get the current calendar time
-    tm *ltm = localtime(&now);  // convert now to local broken-down time
-    int currentDay = ltm->tm_mday;
-    int currentMonth = 1 + ltm->tm_mon;
-    int currentYear = 1900 + ltm->tm_year;
+    int day = 0;
+    int month = 0;
+    int year = 0;
+    char firstSlash = '\0';
+    char secondSlash = '\0';
 
-    // Extract the expiry date
-    int day, month, year;
-    char slash;
-    stringstream ss(expiryDate);  // creates a stream from the input string
+    stringstream ss(expiryDate);
+    if (!(ss >> day >> firstSlash >> month >> secondSlash >> year) ||
+        firstSlash != '/' || secondSlash != '/') {
+        return true;
+    }
 
-    // the variable slash is used to consume the / characters.
-    // attempts to read three integers separated by two characters
-    ss >> day >> slash >> month >> slash >> year;
+    // Reject trailing non-whitespace characters and malformed calendar dates.
+    ss >> ws;
+    if (!ss.eof() || year < 1 || month < 1 || month > 12 || day < 1) {
+        return true;
+    }
 
-    // Comparing dates
-    if (year < currentYear) return true;
-    if (year == currentYear && month < currentMonth) return true;
-    if (year == currentYear && month == currentMonth && day < currentDay) return true;
-    return false;
+    const bool isLeapYear = (year % 400 == 0) ||
+                            (year % 4 == 0 && year % 100 != 0);
+    const int daysInMonth[] = {
+        31, isLeapYear ? 29 : 28, 31, 30, 31, 30,
+        31, 31, 30, 31, 30, 31
+    };
+    if (day > daysInMonth[month - 1]) {
+        return true;
+    }
+
+    time_t now = time(0);
+    tm *localTime = localtime(&now);
+    if (localTime == nullptr) {
+        // Fail closed if the system clock cannot be read.
+        return true;
+    }
+
+    const int currentYear = 1900 + localTime->tm_year;
+    const int currentMonth = 1 + localTime->tm_mon;
+    const int currentDay = localTime->tm_mday;
+
+    if (year != currentYear) return year < currentYear;
+    if (month != currentMonth) return month < currentMonth;
+    return day < currentDay;
 }
 
 class Medicine{
